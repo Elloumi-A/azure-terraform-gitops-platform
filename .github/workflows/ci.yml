@@ -28,6 +28,6 @@ jobs:
             -p 127.0.0.1:8081:8080 devops-platform:ci
           trap 'docker rm -f devops-platform-ci >/dev/null' EXIT
 
-          curl -fsS --retry 10 --retry-connrefused --retry-delay 1 \
+          curl -fsS --retry 10 --retry-all-errors --max-time 3 --retry-max-time 20 --retry-delay 1 \
             http://127.0.0.1:8081/healthz
           curl -fsS http://127.0.0.1:8081/
