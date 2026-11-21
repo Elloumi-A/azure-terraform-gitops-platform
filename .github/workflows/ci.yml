@@ -1,0 +1,33 @@
+name: Container CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Build the image
+        run: docker build -t devops-platform:ci ./app
+
+      - name: Smoke-test the container
+        run: |
+          docker run -d --name devops-platform-ci \
+            -p 127.0.0.1:8081:8080 devops-platform:ci
+          trap 'docker rm -f devops-platform-ci >/dev/null' EXIT
+
+          curl -fsS --retry 10 --retry-connrefused --retry-delay 1 \
+            http://127.0.0.1:8081/healthz
+          curl -fsS http://127.0.0.1:8081/
