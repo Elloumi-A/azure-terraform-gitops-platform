@@ -20,7 +20,7 @@ jobs:
           persist-credentials: false
 
       - name: Build the image
-        run: docker build -t devops-platform:ci ./app
+        run: docker build --label org.opencontainers.image.source="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" -t devops-platform:ci ./app
 
       - name: Smoke-test the container
         run: |
@@ -31,3 +31,42 @@ jobs:
           curl -fsS --retry 10 --retry-all-errors --max-time 3 --retry-max-time 20 --retry-delay 1 \
             http://127.0.0.1:8081/healthz
           curl -fsS http://127.0.0.1:8081/
+
+      - name: Save the tested image
+        if: github.event_name == 'push'
+        run: docker save -o "$RUNNER_TEMP/devops-platform.tar" devops-platform:ci
+
+      - name: Upload the tested image
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: tested-image
+          path: ${{ runner.temp }}/devops-platform.tar
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    if: github.event_name == 'push'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - name: Download the tested image
+        uses: actions/download-artifact@v8
+        with:
+          name: tested-image
+          path: ${{ runner.temp }}
+
+      - name: Push to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker load -i "$RUNNER_TEMP/devops-platform.tar"
+          printf '%s\n' "$GHCR_TOKEN" |
+            docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
+          image="ghcr.io/${GITHUB_REPOSITORY,,}:sha-${GITHUB_SHA}"
+          docker tag devops-platform:ci "$image"
+          docker push "$image"
