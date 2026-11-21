@@ -5,7 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/":
-            status, payload = 200, {"service": "devops-platform"}
+            status, payload = 200, {"service": "devops-platform", "version": "0.2.0"}
         elif self.path == "/healthz":
             status, payload = 200, {"status": "ok"}
         else:
