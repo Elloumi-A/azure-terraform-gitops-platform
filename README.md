@@ -6,20 +6,7 @@ The Azure deployment served version `0.2.0`, and both HTTP endpoints returned `2
 
 ## How the delivery pipeline works
 
-```mermaid
-flowchart TD
-    Source["GitHub source commit"] --> CI["GitHub Actions builds and tests"]
-    CI --> GHCR["GHCR stores the tested image"]
-    GHCR --> Promotion["I commit the selected image tag"]
-    Promotion --> Git["Git stores the Helm chart and values"]
-    Git --> ArgoKind["Argo CD on Kind"]
-    Git --> ArgoAzure["Argo CD on Azure K3s"]
-    ArgoKind --> LocalApp["App on Kind"]
-    ArgoAzure --> AzureApp["App on K3s"]
-    GHCR -->|"Kind pulls the image"| LocalApp
-    GHCR -->|"K3s pulls the image"| AzureApp
-    Terraform["Terraform provisions the Azure VM and network"] --> ArgoAzure
-```
+![DevOps architecture showing GitHub Actions, GHCR, manual image promotion, and Argo CD deployments to Kind and Azure K3s](docs/devops-platform-architecture.svg)
 
 Pull requests targeting `main` build the Docker image and smoke-test `/` and `/healthz`. On a push to `main`, a separate publishing job pushes the **same tested image** to GHCR under a `sha-<commit>` tag.
 
